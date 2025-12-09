@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Page Title</title>
+	<title>ADISE 25 PROJECT</title>
 </head>
 <body>
 
-	<h1>This is a Heading</h1>
-	<p>This is a paragraph.</p>
-
+	<h1>This a kseri game</h1>
+    <p>Click the button below to load test data from the backend.</p>
 	<button id="loadDataBtn">Load Test Data</button>
 
 	<div id="output"></div>
@@ -16,7 +15,7 @@
 		const btn = document.getElementById('loadDataBtn');
 		
 		btn.addEventListener('click', () => {
-            	fetch('test_backend.php')   // call PHP backend
+            	fetch('test_backend.php')   
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('output').innerHTML = data;
