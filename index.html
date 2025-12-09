@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Page Title</title>
+</head>
+<body>
+
+	<h1>This is a Heading</h1>
+	<p>This is a paragraph.</p>
+
+	<button id="loadDataBtn">Load Test Data</button>
+
+	<div id="output"></div>
+	
+	<script>
+		const btn = document.getElementById('loadDataBtn');
+		
+		btn.addEventListener('click', () => {
+            	fetch('test_backend.php')   // call PHP backend
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('output').innerHTML = data;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('output').innerHTML = 'Failed to load data.';
+                });
+        });
+    </script>
+
+</body>
+</html>
