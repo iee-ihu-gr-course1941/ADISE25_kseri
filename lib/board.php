@@ -1,0 +1,92 @@
+<?php
+
+function createGame() {
+    global $mysqli;
+
+    // insert a new game with default status
+    $query = "INSERT INTO game (status) VALUES ('initialized')";
+    if (!$mysqli->query($query)) {
+        return ['error' => 'Failed to create game: ' . $mysqli->error];
+    }
+
+    // Get the inserted game_id
+    $game_id = $mysqli->insert_id;
+
+    return ['success' => true, 'game_id' => $game_id, 'status' => 'initialized'];
+}
+
+// Shuffle deck, fill table, player hands and pick a player to start
+function startGame($game_id) {
+    global $mysqli;
+
+    $mysqli->query("CALL clean_board($game_id)");
+
+    // Check that exactly 2 players joined this game
+    $stmt = $mysqli->prepare("SELECT id, username FROM players WHERE game_id = ?");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows !== 2) {
+        return ['error' => 'Game cannot start: 2 players are required.'];
+    }
+
+    $players = [];
+    while ($row = $result->fetch_assoc()) {
+        $players[] = $row['username'];
+    }
+
+    // Shuffle deck
+    $mysqli->begin_transaction();
+    try {
+        // Assign a random position to each card in deck
+        $mysqli->query("SET @pos := 0");
+        $shuffleQuery = "UPDATE board 
+                         SET position = (@pos := @pos + 1)
+                         WHERE game_id = $game_id AND location = 'deck'
+                         ORDER BY RAND()";
+        if (!$mysqli->query($shuffleQuery)) {
+            throw new Exception("Failed to shuffle deck: " . $mysqli->error);
+        }
+
+        // Give 6 cards to each player
+        foreach ($players as $player) {
+            $dealQuery = "UPDATE board
+                          SET location='hand', owner='$player', position=NULL
+                          WHERE game_id=$game_id AND location='deck'
+                          ORDER BY position
+                          LIMIT 6";
+            if (!$mysqli->query($dealQuery)) {
+                throw new Exception("Failed to deal cards to $player: " . $mysqli->error);
+            }
+        }
+
+        // Give 4 cards to the table
+        $dealTable = "UPDATE board
+                      SET location='table', owner=NULL, position=NULL
+                      WHERE game_id=$game_id AND location='deck'
+                      ORDER BY position
+                      LIMIT 4";
+        if (!$mysqli->query($dealTable)) {
+            throw new Exception("Failed to deal cards to table: " . $mysqli->error);
+        }
+
+        // Pick random current player
+        $pickPlayerQuery = "UPDATE game
+                            SET status='started',
+                                current_player_id = (
+                                    SELECT id FROM players WHERE game_id=$game_id ORDER BY RAND() LIMIT 1
+                                )
+                            WHERE id=$game_id AND status='initialized'";
+        if (!$mysqli->query($pickPlayerQuery)) {
+            throw new Exception("Failed to set current player: " . $mysqli->error);
+        }
+
+        $mysqli->commit();
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        return ['error' => $e->getMessage()];
+    }
+
+    return ['success' => true, 'message' => 'Game started', 'players' => $players];
+}
