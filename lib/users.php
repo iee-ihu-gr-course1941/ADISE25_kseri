@@ -113,7 +113,7 @@ function getPlayerTokenByUsername($username) {
 function getPlayerByToken($token) {
     global $mysqli;
 
-    $query = "SELECT id, username, score, game_id FROM players WHERE token = ?";
+    $query = "SELECT id FROM players WHERE token = ?";
     $stmt = $mysqli->prepare($query);
     if (!$stmt) return null;
     $stmt->bind_param('s', $token);
@@ -121,8 +121,10 @@ function getPlayerByToken($token) {
     $result = $stmt->get_result();
 
     if ($row = $result->fetch_assoc()) {
-        return $row;
+        return $row['id'];
     }
 
     return null;
 }
+
+?>

@@ -42,6 +42,19 @@ if ($resource === 'game') {
         exit;
     }
 
+    $game_id = $input['game_id'] ?? null;
+    $token = $input['token'] ?? null;
+
+    if (!$game_id || !$token) {
+        echo json_encode(['error' => 'game_id and token are required'], JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    if (!authenticatePlayer($token)) {
+        echo json_encode(['error' => 'Invalid token'], JSON_PRETTY_PRINT);
+        exit;
+    }
+
     // POST game/start
     if ($method === 'POST' && isset($request[1]) && $request[1] === 'start') {
         $game_id = $input['game_id'] ?? null;
@@ -60,9 +73,24 @@ if ($resource === 'game') {
         echo json_encode($response, JSON_PRETTY_PRINT);
         exit;
     }
+
+    if ($method === 'GET' && $request[1] === 'hand') {
+        // Get current player's hand
+        $player_id = getPlayerByToken($token);
+        echo json_encode(getHand($player_id, $game_id), JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    if ($method === 'GET' && $request[1] === 'table') {
+        // Get table cards
+        echo json_encode(getTable($game_id), JSON_PRETTY_PRINT);
+        exit;
+    }
 }
 
 
 // Default: unknown route
 http_response_code(404);
 echo json_encode(['error' => 'Invalid endpoint'], JSON_PRETTY_PRINT);
+
+?>

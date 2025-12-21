@@ -1,29 +1,9 @@
 <?php
+require_once 'credentials.php';
 
-$host = 'localhost';
-$db = 'adise25_db';
-$user = 'root';
-$pass = '';
+$mysqli = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME, null, $DB_SOCKET);
 
-// Try to connect to host or localhost
-if (gethostname() == 'users.iee.ihu.gr') {
-    $mysqli = new mysqli(
-        $host,
-        $user,
-        $pass,
-        $db,
-            null,
-        '/home/student/it/2018/it185328/mysql/run/mysql.sock'
-    );
-} else {
-    $mysqli = new mysqli (
-        $host,
-        $user,
-        $pass,
-        $db);
-}
-
-if ($mysqli -> connect_errno) {
+if ($mysqli->connect_errno) {
     http_response_code(500);
     echo json_encode([
         'error' => 'Database connection failed'

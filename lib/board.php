@@ -8,11 +8,26 @@ function createGame() {
     if (!$mysqli->query($query)) {
         return ['error' => 'Failed to create game: ' . $mysqli->error];
     }
-
     // Get the inserted game_id
     $game_id = $mysqli->insert_id;
 
-    return ['success' => true, 'game_id' => $game_id, 'status' => 'initialized'];
+    $query = "INSERT INTO board (game_id, card_id, location)
+                SELECT ?, id, 'deck' FROM cards";
+    $stmt = $mysqli->prepare($query);
+    if(!$stmt) {
+        return ['error' => 'Prepare failed: ' . $mysqli->error];
+    }
+    $stmt->bind_param('i', $game_id);
+
+    if (!$stmt->execute()) {
+        return ['error' => 'Failed to initialize board: ' . $stmt->error];
+    }
+
+    return [
+        'success' => true,
+        'game_id' => $game_id,
+        'status' => 'initialized'
+    ];
 }
 
 // Shuffle deck, fill table, player hands and pick a player to start
@@ -90,3 +105,61 @@ function startGame($game_id) {
 
     return ['success' => true, 'message' => 'Game started', 'players' => $players];
 }
+
+function getHand($player_id, $game_id) {
+    global $mysqli;
+
+    // Get username from player_id
+    $stmt = $mysqli->prepare("SELECT username FROM players WHERE id = ?");
+    $stmt->bind_param('i', $player_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+
+    if (!$row) {
+        return [];
+    }
+    $username = $row['username'];
+
+    $query = "
+        SELECT b.card_id, c.suit, c.rank
+        FROM board b
+        JOIN cards c ON b.card_id = c.id
+        WHERE b.owner = ? AND b.location = 'hand' AND b.game_id = ?
+        ORDER BY b.position";
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param('si', $username, $game_id); 
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $hand = [];
+    while ($row = $result->fetch_assoc()) {
+        $hand[] = $row;
+    }
+    return $hand;
+}
+
+
+function getTable($game_id) {
+    global $mysqli;
+
+    $query = "
+        SELECT b.card_id, c.suit, c.rank
+        FROM board b
+        JOIN cards c ON b.card_id = c.id
+        WHERE b.location = 'table' AND b.game_id = ?
+        ORDER BY b.position";
+
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param('i',$game_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $table = [];
+    while ($row = $result->fetch_assoc()) {
+        $table[] = $row;
+    }
+    return $table;
+}
+
+?>
