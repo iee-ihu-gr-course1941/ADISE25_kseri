@@ -1,0 +1,12 @@
+  GNU nano 7.2                                            .htaccess
+php_flag display_startup_errors on
+php_flag display_errors on
+php_flag html_errors on
+php_flag log_errors on
+php_value error_log logs/PHP_errors.log
+
+AcceptPathInfo On
+
+<Limit GET HEAD POST PUT DELETE OPTIONS>
+Require all granted
+</Limit>
