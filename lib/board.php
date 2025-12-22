@@ -3,25 +3,26 @@
 function createGame() {
     global $mysqli;
 
-    // insert a new game with default status
+    $mysqli->begin_transaction();
+
+    // Insert a new game
     $query = "INSERT INTO game (status) VALUES ('initialized')";
     if (!$mysqli->query($query)) {
+        $mysqli->rollback();
         return ['error' => 'Failed to create game: ' . $mysqli->error];
     }
-    // Get the inserted game_id
+
     $game_id = $mysqli->insert_id;
 
+    // Initialize board
     $query = "INSERT INTO board (game_id, card_id, location)
-                SELECT ?, id, 'deck' FROM cards";
-    $stmt = $mysqli->prepare($query);
-    if(!$stmt) {
-        return ['error' => 'Prepare failed: ' . $mysqli->error];
+              SELECT $game_id, id, 'deck' FROM cards";
+    if (!$mysqli->query($query)) {
+        $mysqli->rollback();
+        return ['error' => 'Failed to initialize board: ' . $mysqli->error];
     }
-    $stmt->bind_param('i', $game_id);
 
-    if (!$stmt->execute()) {
-        return ['error' => 'Failed to initialize board: ' . $stmt->error];
-    }
+    $mysqli->commit();
 
     return [
         'success' => true,
@@ -30,11 +31,12 @@ function createGame() {
     ];
 }
 
+
 // Shuffle deck, fill table, player hands and pick a player to start
 function startGame($game_id) {
     global $mysqli;
 
-    $mysqli->query("CALL clean_board($game_id)");
+    $mysqli->query("CALL CLEAN_BOARD($game_id)");
 
     // Check that exactly 2 players joined this game
     $stmt = $mysqli->prepare("SELECT id, username FROM players WHERE game_id = ?");
