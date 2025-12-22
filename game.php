@@ -29,16 +29,16 @@ if ($request[0] === 'player') {
         $game_id = $input['game_id'] ?? null;
 
         if (!$username) {
-            echo json_encode(['error' => 'Username is required']);
+            echo json_encode(['error' => 'Username is required'], JSON_PRETTY_PRINT);
             exit;
         }
         if (!$game_id) {
-            echo json_encode(['error' => 'game_id is required']);
+            echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
 
         $response = connectPlayer();
-        echo json_encode($response);
+        echo json_encode($response, JSON_PRETTY_PRINT);
         exit;
     }
 }
@@ -48,7 +48,7 @@ if ($request[0] === 'game') {
     // POST game/create
     if ($method === 'POST' && isset($request[1]) && $request[1] === 'create') {
         $response = createGame();
-        echo json_encode($response);
+        echo json_encode($response, JSON_PRETTY_PRINT);
         exit;
     }
 
@@ -58,16 +58,16 @@ if ($request[0] === 'game') {
         $token = $input['token'] ?? null;
         
         if (!$game_id) {
-            echo json_encode(['error' => 'game_id is required']);
+            echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
         if (!$token || !authenticatePlayer($token)) {
-            echo json_encode(['error' => 'Invalid or missing token']);
+            echo json_encode(['error' => 'Invalid or missing token'], JSON_PRETTY_PRINT);
             exit;
         }
 
         $response = startGame($game_id);
-        echo json_encode($response);
+        echo json_encode($response, JSON_PRETTY_PRINT);
         exit;
     }
 
@@ -88,12 +88,12 @@ if ($request[0] === 'game') {
 
         if ($request[1] === 'hand') {
             $player_id = getPlayerByToken($token);
-            echo json_encode(getHand($player_id, $game_id));
+            echo json_encode(getHand($player_id, $game_id), JSON_PRETTY_PRINT);
             exit;
         }
 
         if ($request[1] === 'table') {
-            echo json_encode(getTable($game_id));
+            echo json_encode(getTable($game_id), JSON_PRETTY_PRINT);
             exit;
         }
     }
