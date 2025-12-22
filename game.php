@@ -3,7 +3,12 @@ require_once "lib/dbconnect.php";
 require_once "lib/users.php";
 require_once "lib/board.php";
 
-header('Content-Type: application/json');
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+
+if (empty($contentType)) {
+    header('Content-Type: application/json');
+    $_SERVER['CONTENT_TYPE'] = 'application/json';
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $request = explode('/', trim($_SERVER['PATH_INFO'] ?? '', '/'));
@@ -13,15 +18,7 @@ if ($input == null) {
     $input = [];
 }
 
-if (isset($_SERVER['HTTP_APP_TOKEN'])) {
-    $input['token'] = $_SERVER['HTTP_APP_TOKEN'];
-} elseif (!isset($input['token'])) {
-    $input['token'] = '';
-}
-
-$resource = $request[0] ?? null;
-
-if ($resource === 'player') {
+if ($request[0] === 'player') {
     if ($method === 'POST') {
         // connect or create player
         $username = $input['username'] ?? null;
@@ -43,7 +40,7 @@ if ($resource === 'player') {
     }
 }
 
-if ($resource === 'game') {
+if ($request[0] === 'game') {
 
     // POST game/create
     if ($method === 'POST' && isset($request[1]) && $request[1] === 'create') {
