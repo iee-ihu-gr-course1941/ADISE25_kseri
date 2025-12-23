@@ -127,4 +127,21 @@ function getPlayerByToken($token) {
     return null;
 }
 
+// Get owner name by player id
+function getPlayerUsernameById($player_id) {
+    global $mysqli;
+
+    $query = "SELECT username FROM players WHERE id = ?";
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param('i', $player_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+
+    if (!$row) {
+        throw new Exception("Invalid player ID");
+    }
+
+    return $row['username'];
+}
 ?>

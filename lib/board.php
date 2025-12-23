@@ -78,12 +78,26 @@ function startGame($game_id) {
             }
         }
 
-        // Give 4 cards to the table
-        $dealTable = "UPDATE board
-                      SET location='table', owner=NULL, position=NULL
-                      WHERE game_id=$game_id AND location='deck'
-                      ORDER BY position
-                      LIMIT 4";
+        // Give 4 cards to the table (NO new transaction here)
+        $mysqli->query("
+            SET @pos := (
+                SELECT COALESCE(MAX(position), 0)
+                FROM board
+                WHERE game_id = $game_id AND location = 'table'
+            )
+        ");
+
+        $dealTable = "
+            UPDATE board
+            SET location='table',
+                owner=NULL,
+                position = (@pos := @pos + 1)
+            WHERE game_id = $game_id
+            AND location = 'deck'
+            ORDER BY position
+            LIMIT 4
+        ";
+
         if (!$mysqli->query($dealTable)) {
             throw new Exception("Failed to deal cards to table: " . $mysqli->error);
         }
@@ -107,6 +121,118 @@ function startGame($game_id) {
 
     return ['success' => true, 'message' => 'Game started', 'players' => $players];
 }
+
+function playCard($game_id, $player_id, $card_id) {
+    global $mysqli;
+
+    $mysqli->begin_transaction();
+
+try {
+    // 1. Get played card details
+    $playerName = getPlayerUsernameById($player_id);
+
+    $stmt = $mysqli->prepare("
+        SELECT c.rank, c.suit
+        FROM board b
+        JOIN cards c ON b.card_id = c.id
+        WHERE b.card_id = ?
+          AND b.owner = ?
+          AND b.location = 'hand'
+    ");
+    $stmt->bind_param('is', $card_id, $playerName);
+    $stmt->execute();
+    $playedCard = $stmt->get_result()->fetch_assoc();
+
+    if (!$playedCard) {
+        throw new Exception("Card does not belong to player");
+    }
+
+    // 2. Get top table card BEFORE playing
+    $stmt = $mysqli->prepare("
+        SELECT c.rank, c.suit
+        FROM board b
+        JOIN cards c ON b.card_id = c.id
+        WHERE b.game_id = ?
+          AND b.location = 'table'
+        ORDER BY b.position DESC
+        LIMIT 1
+    ");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $topTableCard = $stmt->get_result()->fetch_assoc();
+
+    // Get count of table cards
+    $stmt = $mysqli->prepare("
+        SELECT COUNT(*) as cnt
+        FROM board
+        WHERE game_id = ? AND location = 'table'
+    ");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $countResult = $stmt->get_result()->fetch_assoc();
+    $tableCount = (int) $countResult['cnt'];
+
+    // Move card to table
+    $mysqli->query("
+        SET @pos := (
+            SELECT COALESCE(MAX(position), 0)
+            FROM board
+            WHERE game_id = $game_id AND location = 'table'
+        )
+    ");
+
+    $stmt = $mysqli->prepare("
+        UPDATE board
+        SET location = 'table',
+            owner = NULL,
+            position = (@pos := @pos + 1)
+        WHERE card_id = ?
+          AND game_id = ?
+    ");
+    $stmt->bind_param('ii', $card_id, $game_id);
+    $stmt->execute();
+
+    // Capture logic
+    $captured = false;
+    $xeri = false;
+
+    if ($topTableCard && $playedCard['rank'] === $topTableCard['rank']) {
+        
+        $stmt = $mysqli->prepare("
+            UPDATE board
+            SET location = 'discard',
+                owner = ?
+            WHERE game_id = ?
+                AND location = 'table'
+        ");
+        $stmt->bind_param('si', $playerName, $game_id);
+        $stmt->execute();
+        $captured = true;
+
+        // Xeri check
+        if ($tableCount === 1) 
+            $xeri = true;
+    }
+
+    $mysqli->commit();
+
+    return [
+            'success' => true,
+            'played_card' => $playedCard,
+            'captured' => $captured,
+            'xeri' => $xeri,
+            'player' => $playerName,
+        ];
+
+} catch (Exception $e) {
+    $mysqli->rollback();
+    return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+}
+}
+
 
 function getHand($player_id, $game_id) {
     global $mysqli;

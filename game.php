@@ -71,6 +71,35 @@ if ($request[0] === 'game') {
         exit;
     }
 
+    // POST game/play
+    if ($method === 'POST' && isset($request[1]) && $request[1] === 'play') {
+        $token = $input['token'] ?? null;
+        $game_id = $input['game_id'] ?? null;
+        $card_id = $input['card_id'] ?? null;
+        
+        if (!$token || !authenticatePlayer($token)) {
+            echo json_encode(['error' => 'Invalid or missing token'], JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        if (!$game_id) {
+            echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        if (!$card_id) {
+            echo json_encode(['error' => 'card_id is required'], JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        $player_id = getPlayerByToken($token);
+        $response = playCard($game_id, $player_id, $card_id);
+        echo json_encode($response, JSON_PRETTY_PRINT);
+        exit;
+
+    }
+        
+
     // GET endpoints
     if ($method === 'GET' && isset($request[1])) {
         $game_id = $input['game_id'] ?? null;
