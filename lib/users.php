@@ -144,4 +144,20 @@ function getPlayerUsernameById($player_id) {
 
     return $row['username'];
 }
+
+// Get current player by his id
+function getCurrentPlayerId($game_id) {
+    global $mysqli;
+
+    $query = "
+        SELECT current_player_id
+        FROM game
+        WHERE id = ?";
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    
+    $row = $stmt->get_result()->fetch_assoc();
+    return (int) $row['current_player_id'];
+}
 ?>

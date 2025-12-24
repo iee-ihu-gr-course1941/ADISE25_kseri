@@ -128,8 +128,13 @@ function playCard($game_id, $player_id, $card_id) {
     $mysqli->begin_transaction();
 
 try {
-    // 1. Get played card details
+    // Get played card details
     $playerName = getPlayerUsernameById($player_id);
+    $current_player = getCurrentPlayerId($game_id);
+
+    if ($player_id !== $current_player) {
+        throw new Exception("Wait for your turn");
+    }
 
     $stmt = $mysqli->prepare("
         SELECT c.rank, c.suit
@@ -147,7 +152,7 @@ try {
         throw new Exception("Card does not belong to player");
     }
 
-    // 2. Get top table card BEFORE playing
+    // Get top table card BEFORE playing
     $stmt = $mysqli->prepare("
         SELECT c.rank, c.suit
         FROM board b
@@ -173,30 +178,31 @@ try {
     $tableCount = (int) $countResult['cnt'];
 
     // Move card to table
-    $mysqli->query("
-        SET @pos := (
-            SELECT COALESCE(MAX(position), 0)
-            FROM board
-            WHERE game_id = $game_id AND location = 'table'
-        )
+    $stmt = $mysqli->prepare("
+    SELECT COALESCE(MAX(position), 0) AS max_pos
+    FROM board
+    WHERE game_id = ? AND location = 'table'
     ");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $maxPos = (int)$stmt->get_result()->fetch_assoc()['max_pos'];
 
     $stmt = $mysqli->prepare("
-        UPDATE board
-        SET location = 'table',
-            owner = NULL,
-            position = (@pos := @pos + 1)
-        WHERE card_id = ?
-          AND game_id = ?
+    UPDATE board
+    SET location = 'table',
+        owner = NULL,
+        position = ?
+    WHERE card_id = ? AND game_id = ?
     ");
-    $stmt->bind_param('ii', $card_id, $game_id);
+    $newPos = $maxPos + 1;
+    $stmt->bind_param('iii', $newPos, $card_id, $game_id);
     $stmt->execute();
 
     // Capture logic
     $captured = false;
     $xeri = false;
 
-    if ($topTableCard && $playedCard['rank'] === $topTableCard['rank']) {
+    if ($topTableCard && ($playedCard['rank'] === $topTableCard['rank'] || $playedCard['rank'] === 'J')) {
         
         $stmt = $mysqli->prepare("
             UPDATE board
@@ -210,9 +216,24 @@ try {
         $captured = true;
 
         // Xeri check
-        if ($tableCount === 1) 
+        if ($tableCount === 1 && $playedCard['rank'] !== 'J') 
             $xeri = true;
     }
+
+    // Change the current player
+    $stmt = $mysqli->prepare("
+    UPDATE game g
+    SET current_player_id = (
+        SELECT p.id
+        FROM players p
+        WHERE p.game_id = g.id
+          AND p.id != g.current_player_id
+        LIMIT 1
+    )
+    WHERE g.id = ?
+    ");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
 
     $mysqli->commit();
 
@@ -230,7 +251,7 @@ try {
             'success' => false,
             'error' => $e->getMessage()
         ];
-}
+    }
 }
 
 

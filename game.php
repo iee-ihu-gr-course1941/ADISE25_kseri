@@ -3,7 +3,6 @@ require_once "lib/dbconnect.php";
 require_once "lib/users.php";
 require_once "lib/board.php";
 
-// CORS headers
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
