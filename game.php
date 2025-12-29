@@ -21,7 +21,7 @@ if ($method === 'POST') {
 } else {
     $input = $_GET;
 }
-
+// POST player
 if ($request[0] === 'player') {
     if ($method === 'POST') {
         $username = $input['username'] ?? null;
@@ -113,21 +113,47 @@ if ($request[0] === 'game') {
             echo json_encode(['error' => 'Invalid token']);
             exit;
         }
-
+        // GET game/hand
         if ($request[1] === 'hand') {
             $player_id = getPlayerByToken($token);
             echo json_encode(getHand($player_id, $game_id), JSON_PRETTY_PRINT);
             exit;
         }
-
+        // GET game/table
         if ($request[1] === 'table') {
             echo json_encode(getTable($game_id), JSON_PRETTY_PRINT);
             exit;
         }
     }
 }
+// GET status/game
+if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $request[1] === 'game') {
+    $game_id = $input['game_id'] ?? null;
+    
+    if (!$game_id) {
+        echo json_encode(['error' => 'game_id required']);
+        exit;
+    }
+    
+    // Get game status
+    $stmt = $mysqli->prepare("SELECT * FROM game WHERE id = ?");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $game = $stmt->get_result()->fetch_assoc();
+    // Get players in the game
+    $stmt = $mysqli->prepare("SELECT * FROM players WHERE game_id = ?");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $players = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    
+    echo json_encode([
+        'game' => $game,
+        'players' => $players
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
 
-// Default: unknown route
+// Default response for invalid endpoints
 http_response_code(404);
 echo json_encode(['error' => 'Invalid endpoint']);
 ?>
