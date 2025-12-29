@@ -1,9 +1,9 @@
-# Kseri Card Game API
+## Kseri Card Game API
 
 A RESTful API built with PHP and MariaDB for the "Kseri" card game.
 This project was developed as part of the ADISE course and is hosted on the IHU (IEE) servers.
 
-# API Endpoints
+## API Endpoints
 
 # 1. Create Game
 Initializes a new game session
@@ -14,7 +14,7 @@ Initializes a new game session
 curl -X POST https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/create
 ```
 
-# 2. Join Game
+### 2. Join Game
 Registers a player to a specific game. Returns a unique token required for all moves
 **Endpoint:** `/player`  
 **Method:** POST 
@@ -25,7 +25,7 @@ curl -X POST https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/player \
   -d '{"username":"player_name", "game_id":game_id}'
 ```
 
-# 3. Start Game
+### 3. Start Game
 Shuffles deck, Deals cards to each player and to the table
 **Endpoint:** `/game/start`  
 **Method:** POST
@@ -35,7 +35,7 @@ curl -X POST https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/star
   -H "Content-Type: application/json" \
   -d '{"game_id":game_id, "token":"player_token"}'
 ```
-# 4. Get Player Hand
+### 4. Get Player Hand
 Returns the current cards by the authenticated player
 **Endpoint:** `/game/hand`  
 **Method:** GET
@@ -43,7 +43,7 @@ Returns the current cards by the authenticated player
 ```bash
 curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/hand?game_id=game_id&token=player_token"
 ```
-# 5. Get Table Cards
+### 5. Get Table Cards
 Returns all cards currently on the table
 **Endpoint:** `/game/table`  
 **Method:** GET
@@ -52,7 +52,7 @@ Returns all cards currently on the table
 curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/table?game_id=1&token=player_token"
 ```
 
-# 6. Play Card
+### 6. Play Card
 Returns all cards currently on the table
 **Endpoint:** `/game/play`  
 **Method:** POST
@@ -63,7 +63,7 @@ curl -X POST https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/play
   -d '{"game_id":game_id, "token":"player_token", "card_id":card_id}'
 ```
 
-# 7. Get Game Status
+### 7. Get Game Status
 Returns the current state of the game and the list of players
 **Endpoint:** `/status/game`  
 **Method:** GET
