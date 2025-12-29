@@ -5,6 +5,12 @@ function createGame() {
 
     $mysqli->begin_transaction();
 
+    // Check for active games before inserting a new one
+    $check = $mysqli->query("SELECT id FROM game WHERE status IN ('initialized', 'started')");
+    if ($check->num_rows > 0) {
+        $mysqli->rollback();
+        return ['error' => 'A game is already in progress. Please finish it or abort it first.'];
+    }
     // Insert a new game
     $query = "INSERT INTO game (status) VALUES ('initialized')";
     if (!$mysqli->query($query)) {
