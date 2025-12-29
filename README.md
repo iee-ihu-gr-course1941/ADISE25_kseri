@@ -72,7 +72,7 @@ Returns the current state of the game and the list of players
 curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/status/game?game_id=game_id"
 ```
 
-# Database tables
+## Database tables
 
 ### 1. Cards
 Contains all available cards for the game
