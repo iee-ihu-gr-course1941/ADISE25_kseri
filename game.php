@@ -28,10 +28,12 @@ if ($request[0] === 'player') {
         $game_id = $input['game_id'] ?? null;
 
         if (!$username) {
+            http_response_code(400);
             echo json_encode(['error' => 'Username is required'], JSON_PRETTY_PRINT);
             exit;
         }
         if (!$game_id) {
+            http_response_code(400);
             echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
@@ -57,10 +59,12 @@ if ($request[0] === 'game') {
         $token = $input['token'] ?? null;
         
         if (!$game_id) {
+            http_response_code(400);
             echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
         if (!$token || !authenticatePlayer($token)) {
+            http_response_code(401);
             echo json_encode(['error' => 'Invalid or missing token'], JSON_PRETTY_PRINT);
             exit;
         }
@@ -77,16 +81,19 @@ if ($request[0] === 'game') {
         $card_id = $input['card_id'] ?? null;
         
         if (!$token || !authenticatePlayer($token)) {
+            http_response_code(401);
             echo json_encode(['error' => 'Invalid or missing token'], JSON_PRETTY_PRINT);
             exit;
         }
 
         if (!$game_id) {
+            http_response_code(400);
             echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
 
         if (!$card_id) {
+            http_response_code(400);
             echo json_encode(['error' => 'card_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
@@ -105,11 +112,13 @@ if ($request[0] === 'game') {
         $token = $input['token'] ?? null;
 
         if (!$game_id || !$token) {
+            http_response_code(400);
             echo json_encode(['error' => 'game_id and token are required']);
             exit;
         }
 
         if (!authenticatePlayer($token)) {
+            http_response_code(401);
             echo json_encode(['error' => 'Invalid token']);
             exit;
         }
@@ -133,6 +142,12 @@ if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $requ
     if (!$game_id) {
         http_response_code(400);
         echo json_encode(['error' => 'game_id required']);
+        exit;
+    }
+    
+    if (!$game) { 
+        http_response_code(404);
+        echo json_encode(['error' => 'Game not found']);
         exit;
     }
     
