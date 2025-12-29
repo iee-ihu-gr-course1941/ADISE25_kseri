@@ -444,16 +444,17 @@ function checkGameOver($game_id) {
     global $mysqli;
     
     $stmt = $mysqli->prepare("
-        SELECT location, COUNT(*) as count 
+        SELECT 
+            SUM(CASE WHEN location = 'deck' THEN 1 ELSE 0 END) as deck_count,
+            SUM(CASE WHEN location = 'hand' THEN 1 ELSE 0 END) as hand_count
         FROM board 
-        WHERE game_id = ? AND location IN ('deck', 'hand')
-        GROUP BY location
+        WHERE game_id = ?
     ");
     $stmt->bind_param('i', $game_id);
     $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
     
-    $deckCount = (int)($result['deck_count'] ?? 0);
+    $deckCount = (int)($result['deck_count']);
     $handCount = (int)($result['hand_count'] ?? 0);
     
     return ($deckCount === 0 && $handCount === 0);
