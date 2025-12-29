@@ -5,7 +5,7 @@ This project was developed as part of the ADISE course and is hosted on the IHU 
 
 ## API Endpoints
 
-# 1. Create Game
+### 1. Create Game
 Initializes a new game session
 **Endpoint:** `/game/create`  
 **Method:** POST  
@@ -53,7 +53,7 @@ curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/table?game_
 ```
 
 ### 6. Play Card
-Returns all cards currently on the table
+Moves a card from player's hand to the table
 **Endpoint:** `/game/play`  
 **Method:** POST
 
@@ -75,35 +75,35 @@ curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/status/game?game
 # Database tables
 
 ### 1. Cards
-Η βιβλιοθήκη όλων των διαθέσιμων φύλλων της τράπουλας.
-* **id**: Μοναδικό αναγνωριστικό κάρτας (Primary Key).
-* **suit**: Το χρώμα/σύμβολο της κάρτας (hearts, diamonds, clubs, spades).
-* **rank**: Η αξία της κάρτας (2-10, J, Q, K, A).
+Contains all available cards for the game
+* **id**: Unique card id - PK
+* **suit**: Card symbol (hearts, diamonds, clubs, spades)
+* **rank**: Card rank (2-10, J, Q, K, A)
 
 ### 2. Players
-Οι πληροφορίες των παικτών που συμμετέχουν στο παιχνίδι.
-* **id**: Μοναδικό αναγνωριστικό παίκτη (Primary Key).
-* **username**: Το όνομα του παίκτη (Unique).
-* **score**: Η τρέχουσα βαθμολογία του παίκτη.
-* **token**: Μοναδικό αναγνωριστικό για την αυθεντικοποίηση.
-* **game_id**: Σύνδεση με το τρέχον παιχνίδι (Foreign Key).
-* **last_action**: Χρονοσφραγίδα τελευταίας δραστηριότητας.
+Gives information for the players
+* **id**: Unique player id - PK
+* **username**: Player's name
+* **score**: Current player's score
+* **token**: Unique token to authenticate
+* **game_id**: The game this player joined (FK)
+* **last_action**: Timestamp of the last action the player did
 
 ### 3. Board
-Η καρδιά του παιχνιδιού. Καταγράφει πού βρίσκεται η κάθε κάρτα.
-* **game_id**: Το παιχνίδι στο οποίο ανήκει η κίνηση (Composite PRI).
-* **card_id**: Η κάρτα που μετακινείται (Composite PRI).
-* **location**: Η θέση της κάρτας (deck, hand, table, discard).
-* **owner**: Ο παίκτης στον οποίο ανήκει η κάρτα.
-* **position**: Η σειρά της κάρτας στη στοίβα.
+The board that holds information about the game
+* **game_id**: The game that takes place
+* **card_id**: The card the is being moved
+* **location**: Card location (deck, hand, table, discard)
+* **owner**: The owner of the card
+* **position**: The position of the card in the stack
 
 ### 4. Game
-Η γενική κατάσταση της κάθε αναμέτρησης.
-* **id**: Μοναδικό αναγνωριστικό παιχνιδιού (Primary Key).
-* **status**: Η φάση του παιχνιδιού (initialized, started, κλπ).
-* **current_player_id**: Το ID του παίκτη που έχει σειρά.
-* **winner_id**: Το ID του νικητή.
-* **last_change**: Χρονοσφραγίδα τελευταίας αλλαγής status.
+A general status for the game
+* **id**: Unique game id (PK).
+* **status**: Game status (initialized, started, ended)
+* **current_player_id**: The current player's turn
+* **winner_id**: Winner's id
+* **last_change**: Timestamp of the last change
 
 
 
