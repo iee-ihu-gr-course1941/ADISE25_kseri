@@ -131,6 +131,7 @@ if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $requ
     $game_id = $input['game_id'] ?? null;
     
     if (!$game_id) {
+        http_response_code(400);
         echo json_encode(['error' => 'game_id required']);
         exit;
     }
@@ -141,7 +142,7 @@ if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $requ
     $stmt->execute();
     $game = $stmt->get_result()->fetch_assoc();
     // Get players in the game
-    $stmt = $mysqli->prepare("SELECT * FROM players WHERE game_id = ?");
+    $stmt = $mysqli->prepare("SELECT id, username, score, last_action FROM players WHERE game_id = ?");
     $stmt->bind_param('i', $game_id);
     $stmt->execute();
     $players = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
