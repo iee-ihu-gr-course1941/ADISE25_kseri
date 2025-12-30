@@ -145,17 +145,18 @@ if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $requ
         exit;
     }
     
+    // Get game status
+    $stmt = $mysqli->prepare("SELECT * FROM game WHERE id = ?");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $game = $stmt->get_result()->fetch_assoc();
+    
     if (!$game) { 
         http_response_code(404);
         echo json_encode(['error' => 'Game not found']);
         exit;
     }
     
-    // Get game status
-    $stmt = $mysqli->prepare("SELECT * FROM game WHERE id = ?");
-    $stmt->bind_param('i', $game_id);
-    $stmt->execute();
-    $game = $stmt->get_result()->fetch_assoc();
     // Get players in the game
     $stmt = $mysqli->prepare("SELECT id, username, score, last_action FROM players WHERE game_id = ?");
     $stmt->bind_param('i', $game_id);

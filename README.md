@@ -31,9 +31,8 @@ Shuffles deck, Deals cards to each player and to the table
 **Method:** POST
 
 ```bash
-curl -X POST https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/start \
-  -H "Content-Type: application/json" \
-  -d '{"game_id":game_id, "token":"player_token"}'
+curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/start" ^
+-d "{\"game_id\":game_id,\"token\":\"token\"}"
 ```
 ### 4. Get Player Hand
 Returns the current cards by the authenticated player
@@ -41,7 +40,7 @@ Returns the current cards by the authenticated player
 **Method:** GET
 
 ```bash
-curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/hand?game_id=game_id&token=player_token"
+curl --location "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/hand?game_id=id&token=token"
 ```
 ### 5. Get Table Cards
 Returns all cards currently on the table
@@ -49,7 +48,7 @@ Returns all cards currently on the table
 **Method:** GET
 
 ```bash
-curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/table?game_id=1&token=player_token"
+curl --location "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/table?game_id=id&token=token"
 ```
 
 ### 6. Play Card
@@ -69,7 +68,7 @@ Returns the current state of the game and the list of players
 **Method:** GET
 
 ```bash
-curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/status/game?game_id=game_id"
+curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/status/game?game_id=id"
 ```
 
 ## Database tables
