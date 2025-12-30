@@ -6,7 +6,9 @@ This project was developed as part of the ADISE course and is hosted on the IHU 
 ## API Endpoints
 
 ### 1. Create Game
+
 Initializes a new game session
+
 **Endpoint:** `/game/create`  
 **Method:** POST  
 
@@ -15,7 +17,9 @@ curl -X POST https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/crea
 ```
 
 ### 2. Join Game
+
 Registers a player to a specific game. Returns a unique token required for all moves
+
 **Endpoint:** `/player`  
 **Method:** POST 
 
@@ -24,7 +28,9 @@ curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/player" 
 ```
 
 ### 3. Start Game
+
 Shuffles deck, Deals cards to each player and to the table
+
 **Endpoint:** `/game/start`  
 **Method:** POST
 
@@ -32,7 +38,9 @@ Shuffles deck, Deals cards to each player and to the table
 curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/start" -H "Content-Type: application/json" -d "{\"game_id\":game_id,\"token\":\"token\"}"
 ```
 ### 4. Get Player Hand
+
 Returns the current cards by the authenticated player
+
 **Endpoint:** `/game/hand`  
 **Method:** GET
 
@@ -40,7 +48,9 @@ Returns the current cards by the authenticated player
 curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/hand?game_id=id&token=token"
 ```
 ### 5. Get Table Cards
+
 Returns all cards currently on the table
+
 **Endpoint:** `/game/table`  
 **Method:** GET
 
@@ -49,7 +59,9 @@ curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/table?game_
 ```
 
 ### 6. Play Card
+
 Moves a card from player's hand to the table
+
 **Endpoint:** `/game/play`  
 **Method:** POST
 
@@ -58,7 +70,9 @@ curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/pla
 ```
 
 ### 7. Get Game Status
+
 Returns the current state of the game and the list of players
+
 **Endpoint:** `/status/game`  
 **Method:** GET
 
