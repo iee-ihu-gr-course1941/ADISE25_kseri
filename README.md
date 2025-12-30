@@ -20,9 +20,7 @@ Registers a player to a specific game. Returns a unique token required for all m
 **Method:** POST 
 
 ```bash
-curl -X POST https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/player \
-  -H "Content-Type: application/json" \
-  -d '{"username":"player_name", "game_id":game_id}'
+curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/player" -H "Content-Type: application/json" -d "{\"username\":\"username\", \"game_id\":id}"
 ```
 
 ### 3. Start Game
@@ -31,8 +29,7 @@ Shuffles deck, Deals cards to each player and to the table
 **Method:** POST
 
 ```bash
-curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/start" ^
--d "{\"game_id\":game_id,\"token\":\"token\"}"
+curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/start" -H "Content-Type: application/json" -d "{\"game_id\":game_id,\"token\":\"token\"}"
 ```
 ### 4. Get Player Hand
 Returns the current cards by the authenticated player
@@ -40,7 +37,7 @@ Returns the current cards by the authenticated player
 **Method:** GET
 
 ```bash
-curl --location "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/hand?game_id=id&token=token"
+curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/hand?game_id=id&token=token"
 ```
 ### 5. Get Table Cards
 Returns all cards currently on the table
@@ -48,7 +45,7 @@ Returns all cards currently on the table
 **Method:** GET
 
 ```bash
-curl --location "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/table?game_id=id&token=token"
+curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/table?game_id=id&token=token"
 ```
 
 ### 6. Play Card
@@ -57,9 +54,7 @@ Moves a card from player's hand to the table
 **Method:** POST
 
 ```bash 
-curl -X POST https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/play \
-  -H "Content-Type: application/json" \
-  -d '{"game_id":game_id, "token":"player_token", "card_id":card_id}'
+curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/play" -H "Content-Type: application/json" -d "{\"game_id\":id, \"token\":\"token\", \"card_id\":id}"
 ```
 
 ### 7. Get Game Status
