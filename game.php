@@ -4,7 +4,7 @@ require_once "lib/users.php";
 require_once "lib/board.php";
 
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
@@ -16,10 +16,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $method = $_SERVER['REQUEST_METHOD'];
 $request = explode('/', trim($_SERVER['PATH_INFO'] ?? '', '/'));
 
-if ($method === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true) ?? [];
-} else {
+if ($method === 'GET') {
     $input = $_GET;
+} else {
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
 }
 // POST player
 if ($request[0] === 'player') {
@@ -74,8 +74,8 @@ if ($request[0] === 'game') {
         exit;
     }
 
-    // POST game/play
-    if ($method === 'POST' && isset($request[1]) && $request[1] === 'play') {
+    // PUT game/play
+    if ($method === 'PUT' && isset($request[1]) && $request[1] === 'play') {
         $token = $input['token'] ?? null;
         $game_id = $input['game_id'] ?? null;
         $card_id = $input['card_id'] ?? null;
@@ -104,7 +104,6 @@ if ($request[0] === 'game') {
         exit;
 
     }
-        
 
     // GET endpoints
     if ($method === 'GET' && isset($request[1])) {
@@ -135,10 +134,12 @@ if ($request[0] === 'game') {
         }
     }
 }
+
 // GET status/game
 if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $request[1] === 'game') {
     $game_id = $input['game_id'] ?? null;
-    
+    global $mysqli;
+
     if (!$game_id) {
         http_response_code(400);
         echo json_encode(['error' => 'game_id required']);
@@ -170,7 +171,7 @@ if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $requ
     exit;
 }
 
-// Default response for invalid endpoints
+// Response for invalid endpoints
 http_response_code(404);
 echo json_encode(['error' => 'Invalid endpoint']);
 ?>

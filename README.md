@@ -63,10 +63,10 @@ curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/table?game_
 Moves a card from player's hand to the table
 
 **Endpoint:** `/game/play`  
-**Method:** POST
+**Method:** PUT
 
 ```bash 
-curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/play" -H "Content-Type: application/json" -d "{\"game_id\":id, \"token\":\"token\", \"card_id\":id}"
+curl -X PUT "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/play" -H "Content-Type: application/json" -d "{\"game_id\":id, \"token\":\"token\", \"card_id\":id}"
 ```
 
 ### 7. Get Game Status
@@ -79,6 +79,12 @@ Returns the current state of the game and the list of players
 ```bash
 curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/status/game?game_id=id"
 ```
+
+## Deadlock / Game-Over Handling
+
+* The game ends automatically when all cards in the deck and players’ hands are exhausted.
+* Since Kseri allows all moves to be played, no invalid moves exist, and no deadlock detection is required.
+* The API enforces the end-of-game check after each move, and the winner is calculated automatically.
 
 ## Database tables
 
