@@ -5,6 +5,12 @@ function createGame() {
 
     $mysqli->begin_transaction();
 
+    // Check for active games before inserting a new one
+    $check = $mysqli->query("SELECT id FROM game WHERE status IN ('initialized', 'started')");
+    if ($check->num_rows > 0) {
+        $mysqli->rollback();
+        return ['error' => 'A game is already in progress. Please finish it or abort it first.'];
+    }
     // Insert a new game
     $query = "INSERT INTO game (status) VALUES ('initialized')";
     if (!$mysqli->query($query)) {
@@ -30,7 +36,6 @@ function createGame() {
         'status' => 'initialized'
     ];
 }
-
 
 // Shuffle deck, fill table, player hands and pick a player to start
 function startGame($game_id) {
@@ -66,19 +71,7 @@ function startGame($game_id) {
             throw new Exception("Failed to shuffle deck: " . $mysqli->error);
         }
 
-        // Give 6 cards to each player
-        foreach ($players as $player) {
-            $dealQuery = "UPDATE board
-                          SET location='hand', owner='$player', position=NULL
-                          WHERE game_id=$game_id AND location='deck'
-                          ORDER BY position
-                          LIMIT 6";
-            if (!$mysqli->query($dealQuery)) {
-                throw new Exception("Failed to deal cards to $player: " . $mysqli->error);
-            }
-        }
-
-        // Give 4 cards to the table (NO new transaction here)
+        // Give 4 cards to the table
         $mysqli->query("
             SET @pos := (
                 SELECT COALESCE(MAX(position), 0)
@@ -102,11 +95,16 @@ function startGame($game_id) {
             throw new Exception("Failed to deal cards to table: " . $mysqli->error);
         }
 
+        // Give 6 cards to each player
+        dealCards($game_id, 6);
+
         // Pick random current player
         $pickPlayerQuery = "UPDATE game
                             SET status='started',
                                 current_player_id = (
-                                    SELECT id FROM players WHERE game_id=$game_id ORDER BY RAND() LIMIT 1
+                                    SELECT id
+                                    FROM players
+                                    WHERE game_id=$game_id ORDER BY RAND() LIMIT 1
                                 )
                             WHERE id=$game_id AND status='initialized'";
         if (!$mysqli->query($pickPlayerQuery)) {
@@ -127,133 +125,265 @@ function playCard($game_id, $player_id, $card_id) {
 
     $mysqli->begin_transaction();
 
-try {
-    // Get played card details
-    $playerName = getPlayerUsernameById($player_id);
-    $current_player = getCurrentPlayerId($game_id);
+    try {
+        // Check game status
+        $stmt = $mysqli->prepare("SELECT status FROM game WHERE id = ?");
+        $stmt->bind_param('i', $game_id);
+        $stmt->execute();
+        $gameStatus = $stmt->get_result()->fetch_assoc();
 
-    if ($player_id !== $current_player) {
-        throw new Exception("Wait for your turn");
-    }
+        if (!$gameStatus) {
+            throw new Exception("Game not found");
+        }
 
-    $stmt = $mysqli->prepare("
-        SELECT c.rank, c.suit
-        FROM board b
-        JOIN cards c ON b.card_id = c.id
-        WHERE b.card_id = ?
-          AND b.owner = ?
-          AND b.location = 'hand'
-    ");
-    $stmt->bind_param('is', $card_id, $playerName);
-    $stmt->execute();
-    $playedCard = $stmt->get_result()->fetch_assoc();
+        if ($gameStatus['status'] === 'ended') {
+            throw new Exception("Game has ended");
+        }
 
-    if (!$playedCard) {
-        throw new Exception("Card does not belong to player");
-    }
+        // Get played card details
+        $playerName = getPlayerUsernameById($player_id);
+        $current_player = getCurrentPlayerId($game_id);
 
-    // Get top table card BEFORE playing
-    $stmt = $mysqli->prepare("
-        SELECT c.rank, c.suit
-        FROM board b
-        JOIN cards c ON b.card_id = c.id
-        WHERE b.game_id = ?
-          AND b.location = 'table'
-        ORDER BY b.position DESC
-        LIMIT 1
-    ");
-    $stmt->bind_param('i', $game_id);
-    $stmt->execute();
-    $topTableCard = $stmt->get_result()->fetch_assoc();
+        if ($player_id !== $current_player) {
+            throw new Exception("Wait for your turn");
+        }
 
-    // Get count of table cards
-    $stmt = $mysqli->prepare("
-        SELECT COUNT(*) as cnt
-        FROM board
-        WHERE game_id = ? AND location = 'table'
-    ");
-    $stmt->bind_param('i', $game_id);
-    $stmt->execute();
-    $countResult = $stmt->get_result()->fetch_assoc();
-    $tableCount = (int) $countResult['cnt'];
+        $stmt = $mysqli->prepare("
+            SELECT c.rank, c.suit
+            FROM board b
+            JOIN cards c ON b.card_id = c.id
+            WHERE b.card_id = ?
+            AND b.owner = ?
+            AND b.location = 'hand'
+        ");
+        $stmt->bind_param('is', $card_id, $playerName);
+        $stmt->execute();
+        $playedCard = $stmt->get_result()->fetch_assoc();
 
-    // Move card to table
-    $stmt = $mysqli->prepare("
-    SELECT COALESCE(MAX(position), 0) AS max_pos
-    FROM board
-    WHERE game_id = ? AND location = 'table'
-    ");
-    $stmt->bind_param('i', $game_id);
-    $stmt->execute();
-    $maxPos = (int)$stmt->get_result()->fetch_assoc()['max_pos'];
+        if (!$playedCard) {
+            throw new Exception("Card does not belong to player");
+        }
 
-    $stmt = $mysqli->prepare("
-    UPDATE board
-    SET location = 'table',
-        owner = NULL,
-        position = ?
-    WHERE card_id = ? AND game_id = ?
-    ");
-    $newPos = $maxPos + 1;
-    $stmt->bind_param('iii', $newPos, $card_id, $game_id);
-    $stmt->execute();
+        // Get top table card BEFORE playing
+        $stmt = $mysqli->prepare("
+            SELECT c.rank, c.suit
+            FROM board b
+            JOIN cards c ON b.card_id = c.id
+            WHERE b.game_id = ?
+            AND b.location = 'table'
+            ORDER BY b.position DESC
+            LIMIT 1
+        ");
+        $stmt->bind_param('i', $game_id);
+        $stmt->execute();
+        $topTableCard = $stmt->get_result()->fetch_assoc();
 
-    // Capture logic
-    $captured = false;
-    $xeri = false;
+        // Get count of table cards
+        $stmt = $mysqli->prepare("
+            SELECT COUNT(*) as cnt
+            FROM board
+            WHERE game_id = ? AND location = 'table'
+        ");
+        $stmt->bind_param('i', $game_id);
+        $stmt->execute();
+        $countResult = $stmt->get_result()->fetch_assoc();
+        $tableCount = (int) $countResult['cnt'];
 
-    if ($topTableCard && ($playedCard['rank'] === $topTableCard['rank'] || $playedCard['rank'] === 'J')) {
-        
+        // Move card to table
+        $stmt = $mysqli->prepare("
+            SELECT COALESCE(MAX(position), 0) AS max_pos
+            FROM board
+            WHERE game_id = ? AND location = 'table'
+            ");
+        $stmt->bind_param('i', $game_id);
+        $stmt->execute();
+        $maxPos = (int)$stmt->get_result()->fetch_assoc()['max_pos'];
+
         $stmt = $mysqli->prepare("
             UPDATE board
-            SET location = 'discard',
-                owner = ?
-            WHERE game_id = ?
-                AND location = 'table'
-        ");
-        $stmt->bind_param('si', $playerName, $game_id);
+            SET location = 'table',
+                owner = NULL,
+                position = ?
+            WHERE card_id = ? AND game_id = ?
+            ");
+        $newPos = $maxPos + 1;
+        $stmt->bind_param('iii', $newPos, $card_id, $game_id);
         $stmt->execute();
-        $captured = true;
 
-        // Xeri check
-        if ($tableCount === 1 && $playedCard['rank'] !== 'J') 
-            $xeri = true;
-    }
+        // Capture logic
+        $captured = false;
+        $xeri = false;
 
-    // Change the current player
+        if ($topTableCard && ($playedCard['rank'] === $topTableCard['rank'] || $playedCard['rank'] === 'J')) {
+            // Get all cards being captured
+            $stmt = $mysqli->prepare("
+                SELECT c.rank, c.suit 
+                FROM board b 
+                JOIN cards c ON b.card_id = c.id 
+                WHERE b.game_id = ? AND b.location = 'table'
+            ");
+            $stmt->bind_param('i', $game_id);
+            $stmt->execute();
+            $cardsBeingCaptured = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            // Add the card the player just played to this list
+            $cardsBeingCaptured[] = $playedCard;
+
+            // Move captured cards to player's discard pile
+            // Get the current max position in discard 
+            $posRes = $mysqli->query(
+                "SELECT COALESCE(MAX(position), 0) as maxp
+                 FROM board
+                 WHERE game_id = $game_id AND location = 'discard'");
+            $nextDiscardPos = (int)$posRes->fetch_assoc()['maxp'] + 1;
+
+            $stmt = $mysqli->prepare("
+                UPDATE board
+                SET location = 'discard', owner = ?, position = ? 
+                WHERE game_id = ? AND location = 'table'
+            ");
+            $stmt->bind_param('sii', $playerName, $nextPos, $game_id);
+            $stmt->execute();
+
+            $captured = true;
+            
+            // Xeri check
+            if ($tableCount === 1 && $playedCard['rank'] !== 'J') {
+                $xeri = true;
+            }
+            // Update score
+            updateScore($game_id, $player_id, $xeri, $cardsBeingCaptured);
+        }
+
+        // Change the current player
+        $stmt = $mysqli->prepare("
+            UPDATE game g
+            SET current_player_id = (
+                SELECT p.id
+                FROM players p
+                WHERE p.game_id = g.id
+                AND p.id != g.current_player_id
+                LIMIT 1
+            )
+            WHERE g.id = ?");
+        $stmt->bind_param('i', $game_id);
+        $stmt->execute();
+        
+        $gameOver = checkGameOver($game_id);
+        $winner_id = null;
+
+        if ($gameOver) {
+            $winner_id = determineWinner($game_id);
+
+            $stmt = $mysqli->prepare("
+                UPDATE game
+                SET status = 'ended',
+                    winner_id = ?
+                WHERE id = ?");
+            $stmt->bind_param('ii', $winner_id, $game_id);
+            $stmt->execute();
+        }
+
+        dealCards($game_id, 6);
+
+        $mysqli->commit();
+
+        return [
+                'success' => true,
+                'played_card' => $playedCard,
+                'captured' => $captured,
+                'xeri' => $xeri,
+                'player' => $playerName,
+                'game_over' => $gameOver,
+                'winner_id' => $winner_id ?? null
+            ];
+
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+}
+
+function determineWinner($game_id) {
+    global $mysqli;
+    
+    // Find who made the LAST capture
     $stmt = $mysqli->prepare("
-    UPDATE game g
-    SET current_player_id = (
-        SELECT p.id
-        FROM players p
-        WHERE p.game_id = g.id
-          AND p.id != g.current_player_id
-        LIMIT 1
-    )
-    WHERE g.id = ?
+        SELECT owner, card_id
+        FROM board 
+        WHERE game_id = ? AND location = 'discard' 
+        ORDER BY position DESC, card_id DESC LIMIT 1
     ");
     $stmt->bind_param('i', $game_id);
     $stmt->execute();
+    $lastCapturerRow = $stmt->get_result()->fetch_assoc();
+    $lastCapturer = $lastCapturerRow['owner'] ?? null;
+    
+    // If there are leftover cards on the table, give them to the last capturer
+    if ($lastCapturer) {
+        // Fetch leftover cards to calculate points
+        $stmt = $mysqli->prepare(
+            "SELECT c.rank, c.suit
+             FROM board b JOIN cards c ON b.card_id = c.id
+             WHERE b.game_id = ? AND b.location = 'table'");
+        $stmt->bind_param('i', $game_id);
+        $stmt->execute();
+        $leftoverCards = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    $mysqli->commit();
+        if (count($leftoverCards) > 0) {
+            // Update the score for those leftover cards
+            $stmt = $mysqli->prepare(
+                "SELECT id
+                 FROM players
+                 WHERE username = ? AND game_id = ?");
+            $stmt->bind_param('si', $lastCapturer, $game_id);
+            $stmt->execute();
+            $lcp_id = $stmt->get_result()->fetch_assoc()['id'];
+            
+            updateScore($game_id, $lcp_id, false, $leftoverCards);
 
-    return [
-            'success' => true,
-            'played_card' => $playedCard,
-            'captured' => $captured,
-            'xeri' => $xeri,
-            'player' => $playerName,
-        ];
-
-} catch (Exception $e) {
-    $mysqli->rollback();
-    return [
-            'success' => false,
-            'error' => $e->getMessage()
-        ];
+            // Move them to discard
+            $stmt = $mysqli->prepare(
+                "UPDATE board 
+                 SET location = 'discard', owner = ?
+                 WHERE game_id = ? AND location = 'table'");
+            $stmt->bind_param('si', $lastCapturer, $game_id);
+            $stmt->execute();
+        }
     }
-}
+    
+    // Find player with MOST cards for the +3 bonus
+    $stmt = $mysqli->prepare("
+        SELECT b.owner, COUNT(*) as card_count
+        FROM board b
+        WHERE b.game_id = ? AND b.location = 'discard'
+        GROUP BY b.owner
+        ORDER BY card_count DESC LIMIT 1
+    ");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    
+    if ($result && $result['owner']) {
+        $stmt = $mysqli->prepare(
+            "UPDATE players
+             SET score = score + 3
+             WHERE username = ? AND game_id = ?");
+        $stmt->bind_param('si', $result['owner'], $game_id);
+        $stmt->execute();
+    }
 
+    // Return the ID of the player with the highest final score
+    $stmt = $mysqli->prepare(
+        "SELECT id 
+         FROM players
+         WHERE game_id = ? ORDER BY score DESC, id ASC LIMIT 1");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    return (int)$stmt->get_result()->fetch_assoc()['id'];
+}
 
 function getHand($player_id, $game_id) {
     global $mysqli;
@@ -288,7 +418,6 @@ function getHand($player_id, $game_id) {
     return $hand;
 }
 
-
 function getTable($game_id) {
     global $mysqli;
 
@@ -311,4 +440,117 @@ function getTable($game_id) {
     return $table;
 }
 
+function checkGameOver($game_id) {
+    global $mysqli;
+    
+    $stmt = $mysqli->prepare("
+        SELECT 
+            SUM(CASE WHEN location = 'deck' THEN 1 ELSE 0 END) as deck_count,
+            SUM(CASE WHEN location = 'hand' THEN 1 ELSE 0 END) as hand_count
+        FROM board 
+        WHERE game_id = ?
+    ");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    
+    $deckCount = (int)($result['deck_count']);
+    $handCount = (int)($result['hand_count'] ?? 0);
+    
+    return ($deckCount === 0 && $handCount === 0);
+}
+
+function updateScore($game_id, $player_id, $xeri, $capturedCards) {
+    global $mysqli;
+    
+    $pointsToAdd = 0;
+
+    foreach ($capturedCards as $card) {
+        // 2 of Clubs = 1 point
+        if ($card['rank'] === '2' && $card['suit'] === 'clubs') {
+            $pointsToAdd += 1;
+        }
+
+        // 10 of Diamonds = 1 point
+        if ($card['rank'] === '10' && $card['suit'] === 'diamonds') {
+            $pointsToAdd += 1;
+        }
+        
+        // J, Q, K = 1 point each
+        if (in_array($card['rank'], ['J', 'Q', 'K'])) {
+            $pointsToAdd += 1;
+        }
+        
+        // Other 10s = 1 point each
+        if ($card['rank'] === '10' && $card['suit'] !== 'diamonds') {
+            $pointsToAdd += 1;
+        }
+    }
+
+    if ($xeri) {
+        $pointsToAdd += 10;
+    }
+
+    // Update score in players table
+    $stmt = $mysqli->prepare(
+        "UPDATE players
+         SET score = score + ?
+         WHERE id = ? AND game_id = ?");
+    $stmt->bind_param('iii', $pointsToAdd, $player_id, $game_id);
+    $stmt->execute();
+}
+
+function dealCards($game_id, $cards_per_player = 6) {
+    global $mysqli;
+
+    // Are there any cards currently in hands?
+    $stmt = $mysqli->prepare(
+        "SELECT COUNT(*) as hand_count
+         FROM board
+         WHERE game_id = ? AND location = 'hand'");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    if ($stmt->get_result()->fetch_assoc()['hand_count'] > 0) {
+        return false; 
+    }
+
+    // Are there enough cards in the deck?
+    $stmt = $mysqli->prepare(
+        "SELECT COUNT(*) as deck_count
+         FROM board
+         WHERE game_id = ? AND location = 'deck'");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    if ($stmt->get_result()->fetch_assoc()['deck_count'] < 12) {
+        return false; 
+    }
+
+    // Get the two players in this game
+    $stmt = $mysqli->prepare(
+        "SELECT username
+         FROM players
+         WHERE game_id = ?");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $players = [];
+    while ($row = $result->fetch_assoc()) {
+        $players[] = $row['username'];
+    }
+
+    if (count($players) !== 2) return false;
+
+    foreach ($players as $player) {
+        $dealQuery = "UPDATE board
+                      SET location='hand', owner=?, position=NULL
+                      WHERE game_id=? AND location='deck'
+                      ORDER BY position ASC
+                      LIMIT ?";
+        $stmt = $mysqli->prepare($dealQuery);
+        $stmt->bind_param('sii', $player, $game_id, $cards_per_player);
+        $stmt->execute();
+    }
+    return true;
+}
 ?>

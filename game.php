@@ -4,7 +4,7 @@ require_once "lib/users.php";
 require_once "lib/board.php";
 
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
@@ -16,22 +16,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $method = $_SERVER['REQUEST_METHOD'];
 $request = explode('/', trim($_SERVER['PATH_INFO'] ?? '', '/'));
 
-if ($method === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true) ?? [];
-} else {
+if ($method === 'GET') {
     $input = $_GET;
+} else {
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
 }
-
+// POST player
 if ($request[0] === 'player') {
     if ($method === 'POST') {
         $username = $input['username'] ?? null;
         $game_id = $input['game_id'] ?? null;
 
         if (!$username) {
+            http_response_code(400);
             echo json_encode(['error' => 'Username is required'], JSON_PRETTY_PRINT);
             exit;
         }
         if (!$game_id) {
+            http_response_code(400);
             echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
@@ -57,10 +59,12 @@ if ($request[0] === 'game') {
         $token = $input['token'] ?? null;
         
         if (!$game_id) {
+            http_response_code(400);
             echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
         if (!$token || !authenticatePlayer($token)) {
+            http_response_code(401);
             echo json_encode(['error' => 'Invalid or missing token'], JSON_PRETTY_PRINT);
             exit;
         }
@@ -70,23 +74,26 @@ if ($request[0] === 'game') {
         exit;
     }
 
-    // POST game/play
-    if ($method === 'POST' && isset($request[1]) && $request[1] === 'play') {
+    // PUT game/play
+    if ($method === 'PUT' && isset($request[1]) && $request[1] === 'play') {
         $token = $input['token'] ?? null;
         $game_id = $input['game_id'] ?? null;
         $card_id = $input['card_id'] ?? null;
         
         if (!$token || !authenticatePlayer($token)) {
+            http_response_code(401);
             echo json_encode(['error' => 'Invalid or missing token'], JSON_PRETTY_PRINT);
             exit;
         }
 
         if (!$game_id) {
+            http_response_code(400);
             echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
 
         if (!$card_id) {
+            http_response_code(400);
             echo json_encode(['error' => 'card_id is required'], JSON_PRETTY_PRINT);
             exit;
         }
@@ -97,7 +104,6 @@ if ($request[0] === 'game') {
         exit;
 
     }
-        
 
     // GET endpoints
     if ($method === 'GET' && isset($request[1])) {
@@ -105,21 +111,23 @@ if ($request[0] === 'game') {
         $token = $input['token'] ?? null;
 
         if (!$game_id || !$token) {
+            http_response_code(400);
             echo json_encode(['error' => 'game_id and token are required']);
             exit;
         }
 
         if (!authenticatePlayer($token)) {
+            http_response_code(401);
             echo json_encode(['error' => 'Invalid token']);
             exit;
         }
-
+        // GET game/hand
         if ($request[1] === 'hand') {
             $player_id = getPlayerByToken($token);
             echo json_encode(getHand($player_id, $game_id), JSON_PRETTY_PRINT);
             exit;
         }
-
+        // GET game/table
         if ($request[1] === 'table') {
             echo json_encode(getTable($game_id), JSON_PRETTY_PRINT);
             exit;
@@ -127,7 +135,43 @@ if ($request[0] === 'game') {
     }
 }
 
-// Default: unknown route
+// GET status/game
+if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $request[1] === 'game') {
+    $game_id = $input['game_id'] ?? null;
+    global $mysqli;
+
+    if (!$game_id) {
+        http_response_code(400);
+        echo json_encode(['error' => 'game_id required']);
+        exit;
+    }
+    
+    // Get game status
+    $stmt = $mysqli->prepare("SELECT * FROM game WHERE id = ?");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $game = $stmt->get_result()->fetch_assoc();
+    
+    if (!$game) { 
+        http_response_code(404);
+        echo json_encode(['error' => 'Game not found']);
+        exit;
+    }
+    
+    // Get players in the game
+    $stmt = $mysqli->prepare("SELECT id, username, score, last_action FROM players WHERE game_id = ?");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $players = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    
+    echo json_encode([
+        'game' => $game,
+        'players' => $players
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
+// Response for invalid endpoints
 http_response_code(404);
 echo json_encode(['error' => 'Invalid endpoint']);
 ?>
