@@ -3,15 +3,7 @@ require_once "lib/dbconnect.php";
 require_once "lib/users.php";
 require_once "lib/board.php";
 
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+header('Content-Type: application/json; charset=utf-8');
 
 $method = $_SERVER['REQUEST_METHOD'];
 $request = explode('/', trim($_SERVER['PATH_INFO'] ?? '', '/'));
@@ -21,7 +13,8 @@ if ($method === 'GET') {
 } else {
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
 }
-// POST player
+
+// player endpoint
 if ($request[0] === 'player') {
     if ($method === 'POST') {
         $username = $input['username'] ?? null;
@@ -44,8 +37,9 @@ if ($request[0] === 'player') {
     }
 }
 
+// game endpoint
 if ($request[0] === 'game') {
-
+    // POST requests
     // POST game/create
     if ($method === 'POST' && isset($request[1]) && $request[1] === 'create') {
         $response = createGame();
@@ -74,6 +68,7 @@ if ($request[0] === 'game') {
         exit;
     }
 
+    // PUT requests
     // PUT game/play
     if ($method === 'PUT' && isset($request[1]) && $request[1] === 'play') {
         $token = $input['token'] ?? null;
@@ -105,20 +100,20 @@ if ($request[0] === 'game') {
 
     }
 
-    // GET endpoints
+    // GET requests
     if ($method === 'GET' && isset($request[1])) {
         $game_id = $input['game_id'] ?? null;
         $token = $input['token'] ?? null;
 
         if (!$game_id || !$token) {
             http_response_code(400);
-            echo json_encode(['error' => 'game_id and token are required']);
+            echo json_encode(['error' => 'game_id and token are required'], JSON_PRETTY_PRINT);
             exit;
         }
 
         if (!authenticatePlayer($token)) {
             http_response_code(401);
-            echo json_encode(['error' => 'Invalid token']);
+            echo json_encode(['error' => 'Invalid token'], JSON_PRETTY_PRINT);
             exit;
         }
         // GET game/hand
@@ -142,7 +137,7 @@ if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $requ
 
     if (!$game_id) {
         http_response_code(400);
-        echo json_encode(['error' => 'game_id required']);
+        echo json_encode(['error' => 'game_id required'], JSON_PRETTY_PRINT);
         exit;
     }
     
@@ -154,7 +149,7 @@ if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $requ
     
     if (!$game) { 
         http_response_code(404);
-        echo json_encode(['error' => 'Game not found']);
+        echo json_encode(['error' => 'Game not found'], JSON_PRETTY_PRINT);
         exit;
     }
     
@@ -173,5 +168,5 @@ if ($method === 'GET' && $request[0] === 'status' && isset($request[1]) && $requ
 
 // Response for invalid endpoints
 http_response_code(404);
-echo json_encode(['error' => 'Invalid endpoint']);
+echo json_encode(['error' => 'Invalid endpoint'], JSON_PRETTY_PRINT);
 ?>
