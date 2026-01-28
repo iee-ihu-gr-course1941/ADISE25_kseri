@@ -41,7 +41,20 @@ function createGame() {
 function startGame($game_id) {
     global $mysqli;
 
-    $mysqli->query("CALL CLEAN_BOARD($game_id)");
+    // Check if 
+    $stmt = $mysqli->prepare("SELECT status FROM game WHERE id = ? FOR UPDATE");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $gameRes = $stmt->get_result();
+    $game = $gameRes->fetch_assoc();
+
+    if (!$game) {
+        return ['error' => 'Game not found.'];
+    }
+
+    if ($game['status'] !== 'initialized') {
+            return ['error' => 'Game already started.'];
+    }
 
     // Check that exactly 2 players joined this game
     $stmt = $mysqli->prepare("SELECT id, username FROM players WHERE game_id = ?");
@@ -52,6 +65,10 @@ function startGame($game_id) {
     if ($result->num_rows !== 2) {
         return ['error' => 'Game cannot start: 2 players are required.'];
     }
+
+    if (!$mysqli->query("CALL CLEAN_BOARD($game_id)")) {
+            throw new Exception("Failed to clean board");
+        }
 
     $players = [];
     while ($row = $result->fetch_assoc()) {
@@ -109,6 +126,10 @@ function startGame($game_id) {
                             WHERE id=$game_id AND status='initialized'";
         if (!$mysqli->query($pickPlayerQuery)) {
             throw new Exception("Failed to set current player: " . $mysqli->error);
+        }
+
+        if ($mysqli->affected_rows === 0) {
+            throw new Exception("Game already started.");
         }
 
         $mysqli->commit();
