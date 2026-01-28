@@ -160,4 +160,15 @@ function getCurrentPlayerId($game_id) {
     $row = $stmt->get_result()->fetch_assoc();
     return (int) $row['current_player_id'];
 }
+
+// Trigger on update for for players table
+function touchPlayer($player_id) {
+    global $mysqli;
+    $stmt = $mysqli->prepare("UPDATE players SET last_action = NOW() WHERE id = ?");
+    $stmt->bind_param('i', $player_id);
+    $stmt->execute();
+}
+
+
+
 ?>

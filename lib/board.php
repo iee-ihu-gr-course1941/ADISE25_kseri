@@ -231,6 +231,10 @@ function playCard($game_id, $player_id, $card_id) {
         $stmt->bind_param('iii', $newPos, $card_id, $game_id);
         $stmt->execute();
 
+        // Mark player as having acted
+        touchPlayer($player_id);
+
+
         // Capture logic
         $captured = false;
         $xeri = false;
