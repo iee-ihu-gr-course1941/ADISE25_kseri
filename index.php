@@ -10,7 +10,7 @@ header('Content-Type: text/html; charset=utf-8');
 </head>
 <body>
     <h3>ADISE 2025 – Project API</h3>
-    <p>This project exposes a REST-like API.</p>
+    <p>This project exposes a RESTful API.</p>
     <p>Use <code>curl</code> or a REST client to interact with it.</p>
 
     <br>

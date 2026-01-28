@@ -3,6 +3,13 @@
 A RESTful API built with PHP and MariaDB for the "Kseri" card game.
 This project was developed as part of the ADISE course and is hosted on the IHU (IEE) servers.
 
+### Author
+- **Name:** Vasilis Petsalakis
+- **Student ID:** it185328
+- **Course:** ADISE
+- **Institution:** International Hellenic University (IHU)
+- **Academic Year:** 2025–2026
+
 ## API Endpoints
 
 ### 1. Create Game
