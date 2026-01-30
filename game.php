@@ -90,6 +90,43 @@ if ($request[0] === 'game') {
         exit;
     }
 
+    // DELETE game/delete
+    if ($method === 'DELETE' && isset($request[1]) && $request[1] === 'abort') {
+        $game_id = $input['game_id'] ?? null;
+        $token = $input['token'] ?? null;
+
+        if (!$game_id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        if (!$token || !authenticatePlayer($token)) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid or missing token'], JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        $player_id = getPlayerByToken($token);
+        global $mysqli;
+        $stmt = $mysqli->prepare(
+            "SELECT 1 FROM players WHERE id = ? AND game_id = ?"
+        );
+        $stmt->bind_param('ii', $player_id, $game_id);
+        $stmt->execute();
+
+        if ($stmt->get_result()->num_rows === 0) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Not allowed to delete this game'], JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        $response = deleteGameAndPlayers($game_id);
+        echo json_encode($response, JSON_PRETTY_PRINT);
+        exit;
+    }
+
+
     // PUT requests
     // PUT game/play
     if ($method === 'PUT' && isset($request[1]) && $request[1] === 'play') {

@@ -513,7 +513,7 @@ function updateScore($game_id, $player_id, $xeri, $capturedCards) {
     $pointsToAdd = 0;
 
     foreach ($capturedCards as $card) {
-        // 2 of Clubs = 1 point
+        // 2 of Spades = 1 point
         if ($card['rank'] === '2' && $card['suit'] === 'spades') {
             $pointsToAdd += 1;
         }
@@ -546,6 +546,50 @@ function updateScore($game_id, $player_id, $xeri, $capturedCards) {
     $stmt->bind_param('iii', $pointsToAdd, $player_id, $game_id);
     $stmt->execute();
 }
+
+function deleteGameAndPlayers($game_id) {
+    global $mysqli;
+
+    $mysqli->begin_transaction();
+    try {
+        $stmt = $mysqli->prepare("SELECT status FROM game WHERE id = ? FOR UPDATE");
+        $stmt->bind_param('i', $game_id);
+        $stmt->execute();
+        $game = $stmt->get_result()->fetch_assoc();
+
+        if (!$game) {
+            throw new Exception("Game not found.");
+        }
+
+        // Delete board rows
+        $stmt = $mysqli->prepare("DELETE FROM board WHERE game_id = ?");
+        $stmt->bind_param('i', $game_id);
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to delete board rows: " . $stmt->error);
+        }
+
+        // Delete players
+        $stmt = $mysqli->prepare("DELETE FROM players WHERE game_id = ?");
+        $stmt->bind_param('i', $game_id);
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to delete players: ");
+        }
+
+        // Delete game
+        $stmt = $mysqli->prepare("DELETE FROM game WHERE id = ?");
+        $stmt->bind_param('i', $game_id);
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to delete game: ");
+        }
+
+        $mysqli->commit();
+        return ['success' => true, 'message' => 'Game and players deleted.'];
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
 
 function dealCards($game_id, $cards_per_player = 6) {
     global $mysqli;

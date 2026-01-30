@@ -99,6 +99,19 @@ curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/res
 
 ```
 
+### 8. Delete game and players
+
+Deletes the game and the players
+
+**Endpoint:** `/game/abort`
+**Method:** DELETE
+
+```bash
+curl -X DELETE "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/delete" -H "Content-Type: application/json" -d "{\"game_id\":id,\"token\":\"token\"}"
+
+
+```
+
 ## Deadlock / Game-Over Handling
 
 * The game ends automatically when all cards in the deck and players’ hands are exhausted.
