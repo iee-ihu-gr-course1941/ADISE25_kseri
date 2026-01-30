@@ -107,7 +107,7 @@ Deletes the game and the players
 **Method:** DELETE
 
 ```bash
-curl -X DELETE "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/delete" -H "Content-Type: application/json" -d "{\"game_id\":id,\"token\":\"token\"}"
+curl -X DELETE "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/abort" -H "Content-Type: application/json" -d "{\"game_id\":id,\"token\":\"token\"}"
 
 
 ```
