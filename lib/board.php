@@ -561,6 +561,12 @@ function deleteGameAndPlayers($game_id) {
             throw new Exception("Game not found.");
         }
 
+        $stmt = $mysqli->prepare("UPDATE game SET winner_id = NULL, current_player_id = NULL WHERE id = ?");
+        $stmt->bind_param('i', $game_id);
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to clear winner/current player: ");
+        }
+
         // Delete board rows
         $stmt = $mysqli->prepare("DELETE FROM board WHERE game_id = ?");
         $stmt->bind_param('i', $game_id);
