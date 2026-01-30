@@ -250,8 +250,6 @@ function playCard($game_id, $player_id, $card_id) {
             $stmt->bind_param('i', $game_id);
             $stmt->execute();
             $cardsBeingCaptured = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-            // Add the card the player just played to this list
-            $cardsBeingCaptured[] = $playedCard;
 
             // Move captured cards to player's discard pile
             // Get the current max position in discard 
@@ -266,7 +264,7 @@ function playCard($game_id, $player_id, $card_id) {
                 SET location = 'discard', owner = ?, position = ? 
                 WHERE game_id = ? AND location = 'table'
             ");
-            $stmt->bind_param('sii', $playerName, $nextPos, $game_id);
+            $stmt->bind_param('sii', $playerName, $nextDiscardPos, $game_id);
             $stmt->execute();
 
             $captured = true;
@@ -492,7 +490,7 @@ function updateScore($game_id, $player_id, $xeri, $capturedCards) {
 
     foreach ($capturedCards as $card) {
         // 2 of Clubs = 1 point
-        if ($card['rank'] === '2' && $card['suit'] === 'clubs') {
+        if ($card['rank'] === '2' && $card['suit'] === 'spades') {
             $pointsToAdd += 1;
         }
 
