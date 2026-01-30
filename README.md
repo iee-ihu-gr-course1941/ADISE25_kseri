@@ -99,7 +99,7 @@ curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/res
 
 ```
 
-### 8. Delete game and players
+### 9. Delete game and players
 
 Deletes the game and the players
 
