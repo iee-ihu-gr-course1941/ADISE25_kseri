@@ -54,7 +54,7 @@ function startGame($game_id) {
 
     if ($game['status'] !== 'initialized') {
             return ['error' => 'Game already started.'];
-    }
+    } 
 
     // Check that exactly 2 players joined this game
     $stmt = $mysqli->prepare("SELECT id, username FROM players WHERE game_id = ?");
@@ -140,6 +140,30 @@ function startGame($game_id) {
 
     return ['success' => true, 'message' => 'Game started', 'players' => $players];
 }
+
+function restartGame($game_id) {
+    global $mysqli;
+
+    $stmt = $mysqli->prepare("SELECT status FROM game WHERE id = ?");
+    $stmt->bind_param('i', $game_id);
+    $stmt->execute();
+    $game = $stmt->get_result()->fetch_assoc();
+
+    if (!$game) {
+        return ['error' => 'Game not found.'];
+    }
+
+    if ($game['status'] === 'started') {
+        return ['error' => 'Game is in progress. Cannot restart a started game.'];
+    }
+
+    if (!$mysqli->query("CALL CLEAN_BOARD($game_id)")) {
+        return ['error' => 'Failed to clean board: '];
+    }
+
+    return startGame($game_id);
+}
+
 
 function playCard($game_id, $player_id, $card_id) {
     global $mysqli;

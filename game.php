@@ -68,6 +68,28 @@ if ($request[0] === 'game') {
         exit;
     }
 
+    // POST game/restart
+    if ($method === 'POST' && isset($request[1]) && $request[1] === 'restart') {
+        $game_id = $input['game_id'] ?? null;
+        $token = $input['token'] ?? null;
+
+        if (!$game_id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'game_id is required'], JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        if (!$token || !authenticatePlayer($token)) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Invalid token for this game'], JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        $response = restartGame($game_id);
+        echo json_encode($response, JSON_PRETTY_PRINT);
+        exit;
+    }
+
     // PUT requests
     // PUT game/play
     if ($method === 'PUT' && isset($request[1]) && $request[1] === 'play') {

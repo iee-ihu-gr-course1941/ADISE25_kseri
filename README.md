@@ -87,6 +87,18 @@ Returns the current state of the game and the list of players
 curl "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/status/game?game_id=id"
 ```
 
+### 8. Restart Game
+
+Restarts the game
+
+**Endpoint:** `/game/restart`  
+**Method:** POST
+
+```bash
+curl -X POST "https://users.iee.ihu.gr/~it185328/ADISE25_kseri/game.php/game/restart" -H "Content-Type: application/json" -d "{\"game_id\":id,\"token\":\"token\"}"
+
+```
+
 ## Deadlock / Game-Over Handling
 
 * The game ends automatically when all cards in the deck and players’ hands are exhausted.
